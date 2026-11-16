@@ -165,7 +165,7 @@ cd ~/Downloads/orbtslot-kane-cli-tests-main
 **If you use git:**
 
 ```
-git clone <repository-url>
+git clone https://github.com/RishabhLambdaTest/orbtslot-kane-cli-tests.git
 ```
 
 ```
