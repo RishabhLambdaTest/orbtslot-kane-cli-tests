@@ -1,0 +1,2142 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "ORBT-AVAILABILITY-API",
+        "description": "REST API documentation for orbt-availability-api",
+        "contact": {
+            "name": "Renuity ORBT Team",
+            "url": "https://www.renuityhome.com",
+            "email": "orbt-dev@renuity.com"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "https://www.renuityhome.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://app-orbtslot-dev-use2-fydm-api.azurewebsites.net",
+            "description": "Generated server url"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Access",
+            "description": "Trusted APIM identity lookup and first-login provisioning"
+        },
+        {
+            "name": "Access Admin",
+            "description": "Access screen data and per-click saves; caller authorization is deferred"
+        },
+        {
+            "name": "Board",
+            "description": "Admin availability board"
+        },
+        {
+            "name": "Availability",
+            "description": "Shared rep-slot capacity and product-specific assignment"
+        },
+        {
+            "name": "Capacity",
+            "description": "ORBT division capacity configuration; no LP push"
+        },
+        {
+            "name": "Reference",
+            "description": "Active filter lists"
+        }
+    ],
+    "paths": {
+        "/api/v1/me/access": {
+            "post": {
+                "tags": [
+                    "Access"
+                ],
+                "summary": "Return or provision signed-in user access",
+                "description": "APIM supplies verified user headers. Backend authentication is deferred; deployment must restrict direct access. New users receive READ_ONLY/ALL. Existing grants and profile are unchanged. No request body.",
+                "operationId": "getOrProvisionMyAccess",
+                "parameters": [
+                    {
+                        "name": "X-User-Object-Id",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-User-Email",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "maxLength": 254,
+                            "minLength": 0,
+                            "pattern": "(?=[^\\p{Cntrl}]*[^\\p{Cntrl}\\s])[^\\p{Cntrl}]*+",
+                            "type": "string",
+                            "format": "email"
+                        }
+                    },
+                    {
+                        "name": "X-User-Name",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "maxLength": 100,
+                            "minLength": 0,
+                            "pattern": "(?=[^\\p{Cntrl}]*[^\\p{Cntrl}\\s])[^\\p{Cntrl}]*+",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Existing or newly provisioned access",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserAccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid forwarded user identity",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "User access disabled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored access or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/capacity/division-config/changes": {
+            "post": {
+                "tags": [
+                    "Capacity"
+                ],
+                "summary": "Save edited rows in ORBT as one atomic change",
+                "description": "Checks every version, saves configuration and audit in one transaction. Read GET configuration first and replace the example version with the returned version. Subsequent availability reads calculate from the new values. Does not write to LP.",
+                "operationId": "createDivisionConfigChange",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DivisionConfigUpdateRequest"
+                            },
+                            "examples": {
+                                "Mad City override - use current GET version": {
+                                    "description": "Mad City override - use current GET version",
+                                    "value": {
+                                        "changes": [
+                                            {
+                                                "divisionId": 1,
+                                                "multiplier": 1.5,
+                                                "unconfirmedWeight": 0.5,
+                                                "version": 1
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved in ORBT; includes affected division monitoring",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DivisionConfigUpdateResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or inactive division",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Stale version; reload before saving",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored counts/configuration or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable; reload before retrying",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/availability/board/search": {
+            "post": {
+                "tags": [
+                    "Board"
+                ],
+                "summary": "Search the availability board",
+                "description": "Read-only. statusCounts covers the full result before status filtering. Send {} on page load: omitted/null/empty filters mean all, with 12 days. Use marketSelections with divisionId and marketCode to select exact branches. Each scheduled rep contributes capacity once. Without products, openings are shared capacity. With products, openings are the maximum jointly feasible additional appointments of any selected applicable products, retaining all existing bookings and qualified rearrangements. This is not a sum of independent product counts or a guarantee of any particular mix. Explicit product codes are matched exactly; omit productCodes or send an empty list for no product filter. All matching markets are returned",
+                "operationId": "searchAvailabilityBoard",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BoardSearchRequest"
+                            },
+                            "examples": {
+                                "Page load - all filters": {
+                                    "description": "Page load - all filters",
+                                    "value": {}
+                                },
+                                "East - Beaumont shared capacity": {
+                                    "description": "East - Beaumont shared capacity",
+                                    "value": {
+                                        "divisionIds": [
+                                            3
+                                        ],
+                                        "marketSelections": [
+                                            {
+                                                "divisionId": 3,
+                                                "marketCode": "BMT"
+                                            }
+                                        ],
+                                        "dayCount": 12
+                                    }
+                                },
+                                "Beaumont - Kitchen and Roofing": {
+                                    "description": "Beaumont - Kitchen and Roofing",
+                                    "value": {
+                                        "divisionIds": [
+                                            3
+                                        ],
+                                        "marketSelections": [
+                                            {
+                                                "divisionId": 3,
+                                                "marketCode": "BMT"
+                                            }
+                                        ],
+                                        "productCodes": [
+                                            "KITCHEN",
+                                            "D3_ROOF"
+                                        ],
+                                        "dayCount": 12
+                                    }
+                                },
+                                "Beaumont - Kitchen": {
+                                    "description": "Beaumont - Kitchen",
+                                    "value": {
+                                        "divisionIds": [
+                                            3
+                                        ],
+                                        "marketSelections": [
+                                            {
+                                                "divisionId": 3,
+                                                "marketCode": "BMT"
+                                            }
+                                        ],
+                                        "productCodes": [
+                                            "KITCHEN"
+                                        ],
+                                        "dayCount": 12
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Board",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BoardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored counts/configuration or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable; no availability fabricated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/access": {
+            "get": {
+                "tags": [
+                    "Access Admin"
+                ],
+                "summary": "Get users, division options, roles and access history",
+                "description": "Returns all users and the 20 newest history records. ALL includes future active divisions. No authentication or administrator-role check in this phase.",
+                "operationId": "getAccessAdminScreen",
+                "responses": {
+                    "200": {
+                        "description": "Access screen data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessAdminResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored data or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Access Admin"
+                ],
+                "summary": "Save one user's role, division selection, or both",
+                "description": "Last-write-wins for submitted fields. Omitted role or division fields remain unchanged. Role and division selection can be updated together atomically in one request. Supply divisionScope and full divisionIds together; ALL uses an empty list. ACCESS_ADMIN requires ALL. Protects the last enabled administrator. Required X-User-Name is captured at save time. Unsupported fields return 400. No-op saves leave timestamps and history unchanged. Caller authorization is deferred.",
+                "operationId": "updateUserAccess",
+                "parameters": [
+                    {
+                        "name": "X-User-Object-Id",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-User-Name",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 100,
+                            "minLength": 0,
+                            "pattern": "[^\\p{Cntrl}]*",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccessUpdateRequest"
+                            },
+                            "examples": {
+                                "Role click - replace objectId from GET": {
+                                    "description": "Role click - replace objectId from GET",
+                                    "value": {
+                                        "objectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                        "role": "ACCESS_ADMIN"
+                                    }
+                                },
+                                "Division click - send complete new selection": {
+                                    "description": "Division click - send complete new selection",
+                                    "value": {
+                                        "objectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                        "divisionScope": "SELECTED",
+                                        "divisionIds": [
+                                            1,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "All divisions click": {
+                                    "description": "All divisions click",
+                                    "value": {
+                                        "objectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                        "divisionScope": "ALL",
+                                        "divisionIds": []
+                                    }
+                                },
+                                "Read-only role and selected divisions together": {
+                                    "description": "Read-only role and selected divisions together",
+                                    "value": {
+                                        "objectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                        "role": "READ_ONLY",
+                                        "divisionScope": "SELECTED",
+                                        "divisionIds": [
+                                            1,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "Admin role and all divisions together": {
+                                    "description": "Admin role and all divisions together",
+                                    "value": {
+                                        "objectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                        "role": "ACCESS_ADMIN",
+                                        "divisionScope": "ALL",
+                                        "divisionIds": []
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved user; changed=false for a no-op",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessUpdateResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or administrator division scope",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown user or unknown/inactive division",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Last-administrator protection",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored data or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/access/users": {
+            "post": {
+                "tags": [
+                    "Access Admin"
+                ],
+                "summary": "Insert a user with default READ_ONLY/ALL access",
+                "description": "Uses the same atomic default insert as first-login provisioning. Requires a verified Entra Object ID; no directory lookup, authentication or caller-role check. Existing users return 409 without changes. Required X-User-Name is captured in audit.",
+                "operationId": "createAccessUser",
+                "parameters": [
+                    {
+                        "name": "X-User-Object-Id",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-User-Name",
+                        "in": "header",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 100,
+                            "minLength": 0,
+                            "pattern": "[^\\p{Cntrl}]*",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AccessCreateRequest"
+                            },
+                            "examples": {
+                                "Verified new Entra user": {
+                                    "description": "Verified new Entra user",
+                                    "value": {
+                                        "objectId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                                        "email": "user@example.com",
+                                        "name": "Example User"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "User and provisioning audit created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserAccessResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid identity/profile or unsupported fields",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Object ID already registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reference/filters": {
+            "get": {
+                "tags": [
+                    "Reference"
+                ],
+                "summary": "Get division, market and product filters",
+                "description": "Products use canonical catalog names and active source mappings in active divisions, independently of slot data. Multiple source mappings are deduplicated. Only stored canonical products are returned. Mappings do not imply market eligibility.",
+                "operationId": "getFilters",
+                "responses": {
+                    "200": {
+                        "description": "Filter lists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FiltersResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid reference data or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/capacity/division-config": {
+            "get": {
+                "tags": [
+                    "Capacity"
+                ],
+                "summary": "Get default and per-division capacity configuration",
+                "description": "Null division values inherit the default. Monitoring covers five market-local calendar days.",
+                "operationId": "getDivisionConfig",
+                "responses": {
+                    "200": {
+                        "description": "Configuration",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DivisionConfigResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Invalid stored counts/configuration or unexpected failure",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/availability/slots": {
+            "get": {
+                "tags": [
+                    "Availability"
+                ],
+                "summary": "Get product-specific openings for one date",
+                "description": "Maximum additional whole appointments that fit simultaneously on qualified scheduled reps. leadId excludes only that lead's current booking; no LP assignments are changed.",
+                "operationId": "getAvailabilitySlots",
+                "parameters": [
+                    {
+                        "name": "X-LP-User-Id",
+                        "in": "header",
+                        "description": "LP user ID asserted by the authenticated LP backend through APIM; logging only.",
+                        "required": true,
+                        "schema": {
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "example": 12345
+                    },
+                    {
+                        "name": "divisionId",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maximum": 32767,
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "example": 3
+                    },
+                    {
+                        "name": "marketCode",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        },
+                        "example": "BMT"
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "example": "2026-11-13"
+                    },
+                    {
+                        "name": "productCode",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        },
+                        "example": "KITCHEN"
+                    },
+                    {
+                        "name": "leadId",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calculated availability",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SlotAvailabilityResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters or unmapped requested product",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown division, market or detail slot",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Required inputs unavailable or assignment search limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/availability/slot-details": {
+            "get": {
+                "tags": [
+                    "Board"
+                ],
+                "summary": "Get the on-demand board hover",
+                "description": "Shared calculation values, per-product explanations, scheduled rep names/capabilities and grouped appointment counts. productOpenings is the maximum jointly feasible additional appointments across selected productCodes; without products it equals sharedOpenings. sharedOpenings is always slot-wide capacity. No customer data or suggested assignments.",
+                "operationId": "getSlotDetails",
+                "parameters": [
+                    {
+                        "name": "divisionId",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maximum": 32767,
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "example": 3
+                    },
+                    {
+                        "name": "marketCode",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        },
+                        "example": "BMT"
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "example": "2026-11-13"
+                    },
+                    {
+                        "name": "slotTime",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "time-local"
+                        },
+                        "example": "14:00"
+                    },
+                    {
+                        "name": "productCodes",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "maxItems": 200,
+                            "minItems": 0,
+                            "type": "array",
+                            "items": {
+                                "maxLength": 20,
+                                "minLength": 0,
+                                "pattern": "^[A-Za-z0-9_-]+$",
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calculated slot details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SlotDetailsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters or unmapped requested product",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown division, market or detail slot",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Required inputs unavailable or assignment search limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/availability/forward-look": {
+            "get": {
+                "tags": [
+                    "Availability"
+                ],
+                "summary": "Find product-bookable times across dates",
+                "description": "openSlots and totalSlots are calculated before onlyOpen filtering. Only LP-configured calendar slots are returned; dates use the market time zone.",
+                "operationId": "getForwardLook",
+                "parameters": [
+                    {
+                        "name": "X-LP-User-Id",
+                        "in": "header",
+                        "description": "LP user ID asserted by the authenticated LP backend through APIM; logging only.",
+                        "required": true,
+                        "schema": {
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int64"
+                        },
+                        "example": 12345
+                    },
+                    {
+                        "name": "divisionId",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maximum": 32767,
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        },
+                        "example": 3
+                    },
+                    {
+                        "name": "marketCode",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        },
+                        "example": "BMT"
+                    },
+                    {
+                        "name": "productCode",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        },
+                        "example": "KITCHEN"
+                    },
+                    {
+                        "name": "fromDate",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        },
+                        "example": "2026-11-13"
+                    },
+                    {
+                        "name": "dayCount",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "maximum": 14,
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32",
+                            "default": 12
+                        }
+                    },
+                    {
+                        "name": "onlyOpen",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "leadId",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calculated availability",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForwardLookResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters or unmapped requested product",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown division, market or detail slot",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected internal error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Required inputs unavailable or assignment search limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiErrors"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "DivisionAccess": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "lpCode": {
+                        "type": "string"
+                    }
+                }
+            },
+            "UserAccessResponse": {
+                "type": "object",
+                "properties": {
+                    "objectId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "READ_ONLY",
+                            "ACCESS_ADMIN"
+                        ]
+                    },
+                    "divisionScope": {
+                        "type": "string",
+                        "enum": [
+                            "ALL",
+                            "SELECTED"
+                        ]
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "divisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DivisionAccess"
+                        }
+                    }
+                },
+                "description": "Stored ORBT grants and currently accessible active divisions"
+            },
+            "ApiError": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Custom error message describing the reason for the error."
+                    },
+                    "code": {
+                        "type": "integer",
+                        "description": "Internal error code",
+                        "format": "int32"
+                    }
+                },
+                "description": "Encapsulates a single error in a response."
+            },
+            "ApiErrors": {
+                "type": "object",
+                "properties": {
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ApiError"
+                        }
+                    }
+                },
+                "description": "Collection of ApiError responses."
+            },
+            "Change": {
+                "required": [
+                    "version"
+                ],
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "multiplier": {
+                        "maximum": 10,
+                        "exclusiveMaximum": false,
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "type": "number"
+                    },
+                    "unconfirmedWeight": {
+                        "maximum": 1,
+                        "exclusiveMaximum": false,
+                        "minimum": 0,
+                        "exclusiveMinimum": false,
+                        "type": "number"
+                    },
+                    "version": {
+                        "minimum": 0,
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            },
+            "DivisionConfigUpdateRequest": {
+                "required": [
+                    "changes"
+                ],
+                "type": "object",
+                "properties": {
+                    "changes": {
+                        "maxItems": 201,
+                        "minItems": 0,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Change"
+                        }
+                    }
+                }
+            },
+            "DivisionConfigUpdateResponse": {
+                "type": "object",
+                "properties": {
+                    "changeId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "savedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "savedBy": {
+                        "type": "string"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Result"
+                        }
+                    }
+                }
+            },
+            "Monitoring": {
+                "type": "object",
+                "properties": {
+                    "windowDays": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "fromDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "toDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "fullSlots": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "overCapacitySlots": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "excessBookedLoad": {
+                        "type": "number"
+                    }
+                }
+            },
+            "Result": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "monitoring": {
+                        "$ref": "#/components/schemas/Monitoring"
+                    }
+                }
+            },
+            "BoardSearchRequest": {
+                "type": "object",
+                "properties": {
+                    "divisionIds": {
+                        "maxItems": 200,
+                        "minItems": 0,
+                        "type": "array",
+                        "items": {
+                            "maximum": 32767,
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    "productCodes": {
+                        "maxItems": 200,
+                        "minItems": 0,
+                        "type": "array",
+                        "items": {
+                            "maxLength": 20,
+                            "minLength": 0,
+                            "pattern": "^[A-Za-z0-9_-]+$",
+                            "type": "string"
+                        }
+                    },
+                    "fromDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "dayCount": {
+                        "maximum": 14,
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "statuses": {
+                        "maxItems": 200,
+                        "minItems": 0,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "open",
+                                "full",
+                                "overCapacity",
+                                "noAdvisor"
+                            ]
+                        }
+                    },
+                    "marketSelections": {
+                        "maxItems": 200,
+                        "minItems": 0,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MarketSelection"
+                        }
+                    }
+                }
+            },
+            "MarketSelection": {
+                "required": [
+                    "divisionId",
+                    "marketCode"
+                ],
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "marketCode": {
+                        "maxLength": 20,
+                        "minLength": 0,
+                        "pattern": "^[A-Za-z0-9_-]+$",
+                        "type": "string"
+                    }
+                }
+            },
+            "BoardResponse": {
+                "type": "object",
+                "properties": {
+                    "asOf": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "statusCounts": {
+                        "$ref": "#/components/schemas/StatusCounts"
+                    },
+                    "markets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Market"
+                        }
+                    }
+                }
+            },
+            "Day": {
+                "type": "object",
+                "properties": {
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "openSlots": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "totalSlots": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Slot"
+                        }
+                    }
+                }
+            },
+            "Market": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "divisionName": {
+                        "type": "string"
+                    },
+                    "marketCode": {
+                        "type": "string"
+                    },
+                    "marketToday": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Day"
+                        }
+                    }
+                }
+            },
+            "Slot": {
+                "type": "object",
+                "properties": {
+                    "slotTime": {
+                        "type": "string"
+                    },
+                    "openings": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "full",
+                            "overCapacity",
+                            "noAdvisor"
+                        ]
+                    }
+                }
+            },
+            "StatusCounts": {
+                "type": "object",
+                "properties": {
+                    "open": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "full": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "overCapacity": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "noAdvisor": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            },
+            "AccessUpdateRequest": {
+                "required": [
+                    "objectId"
+                ],
+                "type": "object",
+                "properties": {
+                    "objectId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "READ_ONLY",
+                            "ACCESS_ADMIN"
+                        ]
+                    },
+                    "divisionScope": {
+                        "type": "string",
+                        "enum": [
+                            "ALL",
+                            "SELECTED"
+                        ]
+                    },
+                    "divisionIds": {
+                        "type": "array",
+                        "items": {
+                            "minimum": 0,
+                            "exclusiveMinimum": true,
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                }
+            },
+            "AccessUpdateResponse": {
+                "type": "object",
+                "properties": {
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "changed": {
+                        "type": "boolean"
+                    },
+                    "changeId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "savedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "savedBy": {
+                        "type": "string"
+                    }
+                }
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "objectId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "READ_ONLY",
+                            "ACCESS_ADMIN"
+                        ]
+                    },
+                    "divisionScope": {
+                        "type": "string",
+                        "enum": [
+                            "ALL",
+                            "SELECTED"
+                        ]
+                    },
+                    "divisionIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedBy": {
+                        "type": "string"
+                    }
+                }
+            },
+            "AccessCreateRequest": {
+                "required": [
+                    "objectId"
+                ],
+                "type": "object",
+                "properties": {
+                    "objectId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "email": {
+                        "maxLength": 254,
+                        "minLength": 0,
+                        "pattern": "(?=[^\\p{Cntrl}]*[^\\p{Cntrl}\\s])[^\\p{Cntrl}]*+",
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "name": {
+                        "maxLength": 100,
+                        "minLength": 0,
+                        "pattern": "(?=[^\\p{Cntrl}]*[^\\p{Cntrl}\\s])[^\\p{Cntrl}]*+",
+                        "type": "string"
+                    }
+                }
+            },
+            "DivisionRef": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "lpCode": {
+                        "type": "string"
+                    }
+                }
+            },
+            "FiltersResponse": {
+                "type": "object",
+                "properties": {
+                    "divisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DivisionRef"
+                        }
+                    },
+                    "markets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MarketRef"
+                        }
+                    },
+                    "products": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProductRef"
+                        }
+                    }
+                }
+            },
+            "MarketRef": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "marketCode": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "timeZone": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ProductRef": {
+                "type": "object",
+                "properties": {
+                    "productCode": {
+                        "type": "string"
+                    },
+                    "productName": {
+                        "type": "string"
+                    },
+                    "divisionIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                }
+            },
+            "Defaults": {
+                "type": "object",
+                "properties": {
+                    "multiplier": {
+                        "type": "number"
+                    },
+                    "unconfirmedWeight": {
+                        "type": "number"
+                    },
+                    "version": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updatedBy": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Division": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "lpCode": {
+                        "type": "string"
+                    },
+                    "multiplier": {
+                        "type": "number"
+                    },
+                    "unconfirmedWeight": {
+                        "type": "number"
+                    },
+                    "version": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "monitoring": {
+                        "$ref": "#/components/schemas/Monitoring"
+                    },
+                    "push": {
+                        "$ref": "#/components/schemas/Push"
+                    }
+                }
+            },
+            "DivisionConfigResponse": {
+                "type": "object",
+                "properties": {
+                    "defaults": {
+                        "$ref": "#/components/schemas/Defaults"
+                    },
+                    "divisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Division"
+                        }
+                    },
+                    "lastPush": {
+                        "$ref": "#/components/schemas/Push"
+                    },
+                    "asOf": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "Push": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "none",
+                            "pending",
+                            "succeeded",
+                            "failed"
+                        ]
+                    },
+                    "lastPushedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "lastPushedBy": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string"
+                    }
+                }
+            },
+            "SlotAvailabilityResponse": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "marketCode": {
+                        "type": "string"
+                    },
+                    "productCode": {
+                        "type": "string"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "asOf": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "lockingEnabled": {
+                        "type": "boolean"
+                    },
+                    "slots": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SlotEntry"
+                        }
+                    }
+                }
+            },
+            "SlotEntry": {
+                "type": "object",
+                "properties": {
+                    "slotTime": {
+                        "type": "string",
+                        "example": "14:00"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Booking-check status. Over-capacity and no-advisor slots are reported as full.",
+                        "example": "open",
+                        "enum": [
+                            "open",
+                            "full"
+                        ]
+                    },
+                    "openings": {
+                        "type": "integer",
+                        "format": "int32",
+                        "example": 1
+                    }
+                }
+            },
+            "Appointments": {
+                "type": "object",
+                "properties": {
+                    "productName": {
+                        "type": "string"
+                    },
+                    "confirmedCount": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "unconfirmedCount": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            },
+            "ProductCheck": {
+                "type": "object",
+                "properties": {
+                    "productName": {
+                        "type": "string"
+                    },
+                    "bookable": {
+                        "type": "boolean"
+                    },
+                    "explanation": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Rep": {
+                "type": "object",
+                "properties": {
+                    "displayName": {
+                        "type": "string"
+                    },
+                    "productNames": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "SlotDetailsResponse": {
+                "type": "object",
+                "properties": {
+                    "scheduledRepCount": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "multiplier": {
+                        "type": "number"
+                    },
+                    "capacity": {
+                        "type": "number"
+                    },
+                    "confirmedCount": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "unconfirmedCount": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "unconfirmedWeight": {
+                        "type": "number"
+                    },
+                    "bookedLoad": {
+                        "type": "number"
+                    },
+                    "productOpenings": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "sharedOpenings": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "productChecks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProductCheck"
+                        }
+                    },
+                    "reps": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Rep"
+                        }
+                    },
+                    "appointments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Appointments"
+                        }
+                    }
+                }
+            },
+            "ForwardLookResponse": {
+                "type": "object",
+                "properties": {
+                    "divisionId": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "marketCode": {
+                        "type": "string"
+                    },
+                    "productCode": {
+                        "type": "string"
+                    },
+                    "fromDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "marketToday": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Day"
+                        }
+                    },
+                    "asOf": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "AccessAdminResponse": {
+                "type": "object",
+                "properties": {
+                    "users": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/User"
+                        }
+                    },
+                    "divisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DivisionAccess"
+                        }
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "READ_ONLY",
+                                "ACCESS_ADMIN"
+                            ]
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/History"
+                        }
+                    },
+                    "asOf": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "AccessSnapshot": {
+                "type": "object",
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "description": "Role name recorded when the audit event occurred"
+                    },
+                    "divisionScope": {
+                        "type": "string",
+                        "enum": [
+                            "ALL",
+                            "SELECTED"
+                        ]
+                    },
+                    "divisionIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "History": {
+                "type": "object",
+                "properties": {
+                    "auditId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "changeId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "objectId": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "userName": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    },
+                    "beforeState": {
+                        "$ref": "#/components/schemas/AccessSnapshot"
+                    },
+                    "afterState": {
+                        "$ref": "#/components/schemas/AccessSnapshot"
+                    },
+                    "changedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "changedBy": {
+                        "type": "string"
+                    },
+                    "changedByName": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}

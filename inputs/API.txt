@@ -1,0 +1,6 @@
+https://app-orbtslot-dev-use2-fydm-api.azurewebsites.net/swagger-ui/index.html#/Access/getOrProvisionMyAccess
+curl -X ‘GET’ \
+‘https://app-orbtslot-dev-use2-fydm-api.azurewebsites.net/api/v1/availability/forward-look?division=1&market=MKE&product=WINDOWS&from=2026-11-05&days=12&onlyOpen=false&excludeSlot=2026-11-05T14%3A00&excludeStatus=confirmed’ \
+-H ‘accept: /’
+
+https://app-orbtslot-dev-use2-fydm-api.azurewebsites.net/swagger-ui/index.html#/Availability/getForwardLook

@@ -1,0 +1,77 @@
+{
+  "api_token": {
+    "value": "sample-token-do-not-use",
+    "secret": true,
+    "description": "Sample secret: an API token, masked in logs and stored in the TestMu AI secrets store. Not used by the Forward Look API."
+  },
+  "division_id": {
+    "value": "3",
+    "secret": false,
+    "description": "Existing division with mapped product and configured open/non-open slots."
+  },
+  "market_code": {
+    "value": "BMT",
+    "secret": false,
+    "description": "Existing market within division_id."
+  },
+  "product_code": {
+    "value": "KITCHEN",
+    "secret": false,
+    "description": "Mapped product in the selected division and market."
+  },
+  "lp_user_id": {
+    "value": "12345",
+    "secret": false,
+    "description": "Positive LP user ID asserted for the test environment."
+  },
+  "from_date": {
+    "value": "2026-11-14",
+    "secret": false,
+    "description": "ISO date covered by the configured-slot fixture."
+  },
+  "market_timezone": {
+    "value": "America/Chicago",
+    "secret": false,
+    "description": "Independently established IANA time zone of selected market."
+  },
+  "configured_slots_fixture": {
+    "value": "divisionId=3, marketCode=BMT, productCode=KITCHEN; use the onlyOpen=false response as the reference",
+    "secret": false,
+    "description": "Independent market-local configured-slot set containing both open and non-open slots and daily pre-filter counts."
+  },
+  "lead_id": {
+    "value": "1",
+    "secret": false,
+    "description": "Positive lead ID for the selected division."
+  },
+  "unmapped_product_code": {
+    "value": "ROOFING",
+    "secret": false,
+    "description": "Valid-format code known not to map to selected division."
+  },
+  "unknown_market_code": {
+    "value": "ZZZ",
+    "secret": false,
+    "description": "Valid-format code known absent from selected division."
+  },
+  "required_input_outage_setup": {
+    "value": "",
+    "secret": false,
+    "description": "Actual controlled setup that makes a required input unavailable."
+  },
+  "search_limit_setup": {
+    "value": "",
+    "secret": false,
+    "description": "Actual controlled setup that exceeds assignment-search limit."
+  },
+  "internal_failure_setup": {
+    "value": "",
+    "secret": false,
+    "description": "Actual controlled setup that causes unexpected internal error."
+  },
+  "unknown_division_id": {
+    "value": "99",
+    "secret": false,
+    "description": "An integer within 1–32767 that is not a configured division in this environment."
+  }
+}
