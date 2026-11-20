@@ -35,7 +35,7 @@ orbtslot-kane-cli-tests/
 ├── README.md                      this guide
 ├── inputs/
 │   ├── orbtslot-swagger.json      the OpenAPI (Swagger) spec, downloaded from /v3/api-docs
-│   └── API.txt                    the Swagger links and the sample curl request
+│   └── api-request.txt            the Swagger links and a sample request
 ├── .testmuai/                     kane-cli's working folder (hidden, see note below)
 │   ├── tests/                     the 14 tests kane-cli generated, one file each
 │   └── variables/
@@ -53,7 +53,7 @@ Every file in this repository is plain text. You can open any of them in TextEdi
 
 ## What happened
 
-kane-cli was given only the two files in `inputs/`: the Swagger spec and the sample curl request. Nothing else was written by hand.
+kane-cli was given only the two files in `inputs/`: the Swagger spec and the sample request (originally a curl command, now written as plain text in `api-request.txt`). Nothing else was written by hand.
 
 | Step | What kane-cli did | Result |
 |---|---|---|
@@ -240,7 +240,7 @@ mkdir ~/orbtslot-my-tests
 ```
 
 ```
-cp inputs/orbtslot-swagger.json inputs/API.txt ~/orbtslot-my-tests/
+cp inputs/orbtslot-swagger.json inputs/api-request.txt ~/orbtslot-my-tests/
 ```
 
 ```
@@ -250,7 +250,7 @@ cd ~/orbtslot-my-tests
 ### Step 2: Let kane-cli read the inputs
 
 ```
-kane-cli context ingest orbtslot-swagger.json API.txt
+kane-cli context ingest orbtslot-swagger.json api-request.txt
 ```
 
 - It asks **"where should this folder's work go?"**. Choose **work locally**.
@@ -258,7 +258,7 @@ kane-cli context ingest orbtslot-swagger.json API.txt
 - It may ask a few questions where the spec isn't clear. If unsure, pick the option marked **recommended**.
 - When asked "Anything to add or change?", type **looks good** and press Return. Then choose **finish**.
 
-Note the ID of the use case called **"Find product-bookable times across dates"**. That's the Forward Look endpoint. You can list them again at any time:
+Note the ID of the use case called **"Find product-bookable times across dates"**. That's the Forward Look endpoint. The number can differ from the `uc-7` used below, so use the ID shown on your screen in the next steps. Also approve it once with `kane-cli context review --approve <id>`. You can list them again at any time:
 
 ```
 kane-cli context list
@@ -394,3 +394,5 @@ After each run, kane-cli writes a short summary per test next to the tests, in f
 ---
 
 *Generated with kane-cli 0.10.4 against the ORBT Slot dev API on 14 Nov 2026.*
+
+> **Why `api-request.txt` and not a curl command?** If an input file contains a raw `curl -X ...` command, kane-cli fails at "reading" that file with **HTTP 403**. The KaneAI service's firewall blocks it. Write the request as plain text (method, URL, headers), as in `inputs/api-request.txt`.
